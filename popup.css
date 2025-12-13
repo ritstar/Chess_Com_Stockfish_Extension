@@ -1,0 +1,113 @@
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  width: 300px;
+  margin: 0;
+  padding: 16px;
+  background-color: #2c2b29; /* Dark chess theme */
+  color: #eeeeee;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 18px;
+  color: #81b64c; /* Chess.com green */
+  text-align: center;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.toggle-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #262522;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.toggle-group label {
+  font-size: 12px;
+  color: #aaa;
+  margin-left: 8px;
+}
+
+.toggle-btn {
+  background: transparent;
+  border: none;
+  color: #aaa;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.toggle-btn.active {
+  background: #454441;
+  color: #fff;
+  font-weight: bold;
+}
+
+.primary-btn {
+  background-color: #81b64c;
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+
+.primary-btn:hover {
+  background-color: #719f41;
+}
+
+.primary-btn:disabled {
+  background-color: #555;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.results {
+  background: #262522;
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid #454441;
+}
+
+.best-move, .evaluation {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.label {
+  color: #aaa;
+  font-size: 12px;
+}
+
+.value {
+  font-weight: bold;
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.status {
+  font-size: 11px;
+  color: #888;
+  margin-top: 8px;
+  text-align: center;
+  min-height: 14px;
+}
