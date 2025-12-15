@@ -5,11 +5,12 @@ A Chrome Extension that integrates the Stockfish chess engine directly into Ches
 ## Features
 
 - **Real-time Analysis**: Uses the powerful Stockfish engine (v10 WASM) to analyze board positions.
-- **Visual Overlays**: Draws arrows on the board to indicate the best move.
-- **In-Page Control Panel**: A persistent "Always On" UI panel for easy access without opening the extension toolbar.
-- **Auto-Play Mode**: Automatically detects opponent moves and calculates the best response instantly.
-- **Manual Mode**: Analyze on demand with a single click.
-- **Side Flipping**: Easily switch analysis between White and Black.
+- **Smart Turn Detection**: Automatically pauses analysis during the opponent's turn and resumes instantly when it's your move.
+- **Visual Overlays**: Draws precise arrows on the board to indicate the best move, with robust support for both White and Black board orientations.
+- **In-Page Control Panel**: A floating, modern glassmorphism UI panel for easy access to controls "Always On" screen.
+- **Auto-Play Mode**: Automatically detects moves and triggers analysis without manual clicks.
+- **Manual Mode**: Analyze on demand with a single click if preferred.
+- **Side Flipping**: Easily switch analysis between White and Black perspectives.
 
 ## Installation
 
