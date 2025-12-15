@@ -14,6 +14,7 @@ injectControlPanel();
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "getBestMove") {
         playerColor = request.playerColor || 'w';
+        updatePanelUI(playerColor);
         triggerAnalysis().then(res => sendResponse(res));
         return true;
     }
@@ -25,48 +26,134 @@ function injectControlPanel() {
     const panel = document.createElement('div');
     panel.id = 'stockfish-panel';
     panel.innerHTML = `
-        <div style="font-weight:bold; margin-bottom:5px; color:#81b64c;">Stockfish Analyzer</div>
-        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-            <button id="sf-toggle-auto" style="padding:5px; cursor:pointer; flex:1; margin-right:5px;">Auto: OFF</button>
-            <button id="sf-flip" style="padding:5px; cursor:pointer;" title="Flip Board Side">Flip Side</button>
+        <div class="sf-header">
+            <span>Stockfish Analyzer</span>
+            <span id="sf-turn-indicator" class="sf-badge">White to Move</span>
         </div>
-        <div id="sf-status" style="font-size:12px; margin-bottom:5px; color:#ccc;">Ready</div>
-        <div id="sf-best-move" style="font-size:16px; font-weight:bold; color:#fff;">-</div>
+        <div class="sf-controls">
+            <button id="sf-toggle-auto">Auto-Play: OFF</button>
+            <button id="sf-flip">Flip Side</button>
+        </div>
+        <div class="sf-result">
+            <div id="sf-status">Ready</div>
+            <div id="sf-best-move">-</div>
+        </div>
     `;
 
-    // Style the panel
-    Object.assign(panel.style, {
-        position: 'fixed',
-        top: '10px',
-        right: '10px',
-        zIndex: '9999',
-        backgroundColor: '#262522',
-        color: '#eee',
-        padding: '10px',
-        borderRadius: '8px',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
-        fontFamily: 'Segoe UI, sans-serif',
-        width: '180px'
-    });
-
+    // Add CSS directly
+    const style = document.createElement('style');
+    style.textContent = `
+        #stockfish-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            width: 220px;
+            background: rgba(30, 30, 30, 0.85); /* Glassmorphism background */
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ececec;
+            padding: 15px;
+            border-radius: 12px;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            transition: all 0.3s ease;
+        }
+        #stockfish-panel:hover {
+            opacity: 1;
+        }
+        .sf-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: #81b64c;
+        }
+        .sf-badge {
+            font-size: 10px;
+            background: #444;
+            color: #fff;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+        .sf-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        #stockfish-panel button {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: background 0.2s;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ddd;
+        }
+        #stockfish-panel button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+        #sf-toggle-auto.active {
+            background: #81b64c !important;
+            color: #fff !important;
+            box-shadow: 0 0 10px rgba(129, 182, 76, 0.4);
+        }
+        .sf-result {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        #sf-best-move {
+            font-size: 24px;
+            font-weight: 700;
+            color: #fff;
+            margin-top: 5px;
+            letter-spacing: 1px;
+        }
+        #sf-status {
+            font-size: 11px;
+            color: #aaa;
+        }
+    `;
+    document.head.appendChild(style);
     document.body.appendChild(panel);
 
     // Event Listeners
     document.getElementById('sf-toggle-auto').addEventListener('click', toggleAutoAnalysis);
     document.getElementById('sf-flip').addEventListener('click', () => {
         playerColor = playerColor === 'w' ? 'b' : 'w';
-        updateStatus(`Playing as: ${playerColor === 'w' ? 'White' : 'Black'}`);
+        updatePanelUI(playerColor);
         // Optionally re-analyze
         if (isAutoAnalysisOn) triggerAnalysis();
     });
+
+    // Initial UI State
+    updatePanelUI(playerColor);
+}
+
+function updatePanelUI(color) {
+    const badge = document.getElementById('sf-turn-indicator');
+    if (badge) {
+        badge.textContent = color === 'w' ? "Playing White" : "Playing Black";
+        badge.style.background = color === 'w' ? "#f0f0f0" : "#222";
+        badge.style.color = color === 'w' ? "#222" : "#f0f0f0";
+    }
 }
 
 function toggleAutoAnalysis() {
     isAutoAnalysisOn = !isAutoAnalysisOn;
     const btn = document.getElementById('sf-toggle-auto');
     btn.textContent = isAutoAnalysisOn ? "Auto: ON" : "Auto: OFF";
-    btn.style.backgroundColor = isAutoAnalysisOn ? "#81b64c" : "";
-    btn.style.color = isAutoAnalysisOn ? "white" : "";
+    if (isAutoAnalysisOn) btn.classList.add('active');
+    else btn.classList.remove('active');
 
     if (isAutoAnalysisOn) {
         startBoardObserver();
@@ -83,7 +170,14 @@ function updateStatus(msg) {
 
 function displayBestMove(move, evaluation) {
     const el = document.getElementById('sf-best-move');
-    if (el) el.textContent = `${move} (${evaluation})`;
+    if (el) {
+        // Beautify move string (e.g., e2e4 -> e2-e4)
+        if (move && move.length === 4) {
+            el.textContent = `${move.substring(0, 2)} ➝ ${move.substring(2, 4)}`;
+        } else {
+            el.textContent = move || '-';
+        }
+    }
 
     if (move) {
         drawArrow(move);
@@ -91,7 +185,34 @@ function displayBestMove(move, evaluation) {
 }
 
 async function triggerAnalysis() {
-    updateStatus('Extracting board...');
+    // Turn detection
+    if (isAutoAnalysisOn) {
+        const turn = detectTurn(); // 'w', 'b', or null
+        if (turn && turn !== playerColor) {
+            updateStatus(`Waiting for opponent...`);
+            // Optional: clear arrow if it's not my turn? 
+            // Usually we want to see the arrow for the move I SHOULD have made? 
+            // Or if opponent just moved, I now want to see MY best move.
+            // "Wait until opponent plays" => When opponent IS playing (their clock running), don't analyze.
+            // When they FINISH playing (clock stops, my clock starts), then analyze.
+
+            // So if detected turn is NOT playerColor, we return/clear.
+
+            // However, we must be careful. If I just moved, now it is Opponent's turn.
+            // The board is in state after MY move. 
+            // Stockfish would suggest move for Opponent. 
+            // The user definitely doesn't want that if they want "suggest when my turns comes".
+
+            const existing = document.getElementById('sf-best-move');
+            if (existing) existing.textContent = "Waiting...";
+            const arrow = document.getElementById('sf-arrow-overlay');
+            if (arrow) arrow.remove();
+
+            return;
+        }
+    }
+
+    updateStatus(`Analyzing as ${playerColor === 'w' ? 'White' : 'Black'}...`);
     try {
         const fen = extractFEN(playerColor);
         if (!fen) {
@@ -100,13 +221,13 @@ async function triggerAnalysis() {
         }
 
         // Avoid re-analyzing same position
-        // if (fen === lastFen) return; 
+        // if (fen === lastFen) return;
         lastFen = fen;
 
-        updateStatus('Calculating...');
+        // updateStatus('Calculating...'); // Keep previous status to show color
         const result = await runStockfish(fen);
         displayBestMove(result.move, result.eval);
-        updateStatus('Complete');
+        updateStatus(`Depth 15 • ${result.eval}`);
         return result;
 
     } catch (e) {
@@ -114,6 +235,52 @@ async function triggerAnalysis() {
         updateStatus('Error: ' + e.message);
         return { error: e.message };
     }
+}
+
+// Helper to find color of tool
+function getClockColor(clockEl) {
+    if (!clockEl) return null;
+    const parent = clockEl.closest('.player-component, .player-avatar, .user-tagline-component');
+    if (parent) {
+        if (parent.classList.contains('white') || parent.querySelector('.white')) return 'w';
+        if (parent.classList.contains('black') || parent.querySelector('.black')) return 'b';
+        // Try internal avatar or icon
+        if (parent.querySelector('.piece.wp, .avatar-white')) return 'w';
+        if (parent.querySelector('.piece.bp, .avatar-black')) return 'b';
+    }
+    // Fallback: check classes on clock itself
+    if (clockEl.classList.contains('clock-white')) return 'w';
+    if (clockEl.classList.contains('clock-black')) return 'b';
+    return null;
+}
+
+function detectTurn() {
+    // Aggressively find all clocks
+    const clocks = document.querySelectorAll('.clock-component');
+
+    for (const clock of clocks) {
+        // Check if this clock is active
+        // Active usually implies class "clock-active" or "running"
+        const isActive = clock.classList.contains('clock-active') ||
+            clock.classList.contains('running') ||
+            clock.classList.contains('clock-player-turn');
+
+        // Also check for "low time" active state which might be different, but usually includes running
+
+        if (isActive) {
+            return getClockColor(clock);
+        }
+    }
+
+    // Fallback For specific layouts (e.g. side-by-side)
+    // Sometimes the active player container has a class
+    const activePlayer = document.querySelector('.player-component.active, .player-component.turn');
+    if (activePlayer) {
+        if (activePlayer.classList.contains('white')) return 'w';
+        if (activePlayer.classList.contains('black')) return 'b';
+    }
+
+    return null;
 }
 
 // --- Board Observation ---
@@ -146,7 +313,7 @@ function drawArrow(move) {
     // move string e.g. "e2e4"
     if (!move || move.length < 4) return;
 
-    const board = document.querySelector('chess-board, #board-layout-chessboard, .board');
+    let board = document.querySelector('chess-board, #board-layout-chessboard, .board');
     if (!board) return;
 
     // Remove existing arrows
@@ -155,6 +322,7 @@ function drawArrow(move) {
 
     // Create SVG overlay
     const rect = board.getBoundingClientRect();
+
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.id = 'sf-arrow-overlay';
     Object.assign(svg.style, {
@@ -163,72 +331,122 @@ function drawArrow(move) {
         left: '0',
         width: '100%',
         height: '100%',
-        pointerEvents: 'none', // Click through
+        pointerEvents: 'none',
         zIndex: '1000'
     });
 
-    // We assume board is relative container, if not we usually need to append TO the board
-    // Chess.com boards are usually custom elements, appending children works often.
+    // Make sure position is relative
     if (getComputedStyle(board).position === 'static') {
         board.style.position = 'relative';
     }
     board.appendChild(svg);
 
+    // Define Arrowhead Marker
+    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+    marker.setAttribute("id", "arrowhead");
+    marker.setAttribute("markerWidth", "10");
+    marker.setAttribute("markerHeight", "7");
+    marker.setAttribute("refX", "9");
+    marker.setAttribute("refY", "3.5");
+    marker.setAttribute("orient", "auto");
+
+    const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+    polygon.setAttribute("points", "0 0, 10 3.5, 0 7");
+    polygon.setAttribute("fill", "#81b64c");
+    polygon.setAttribute("fill-opacity", "0.9");
+
+    marker.appendChild(polygon);
+    defs.appendChild(marker);
+    svg.appendChild(defs);
+
+    // Robust orientation check
+    const isBoardFlipped = (() => {
+        try {
+            // Probe for known squares to determined visual order
+            // .square-11 is a1. .square-18 is a8.
+            const sq11 = board.querySelector('.square-11');
+            const sq18 = board.querySelector('.square-18');
+
+            if (sq11 && sq18) {
+                const r1 = sq11.getBoundingClientRect();
+                const r8 = sq18.getBoundingClientRect();
+                // If a1 (rank 1) is visually below a8 (rank 8), it is Normal.
+                // If a1 is above a8, it is Flipped.
+                return r1.top < r8.top;
+            }
+        } catch (e) { }
+
+        // Fallback to class checks
+        return board.classList.contains('flipped') ||
+            board.closest('.flipped') !== null;
+    })();
+
     // Calculate coords
     const from = move.substring(0, 2);
     const to = move.substring(2, 4);
 
-    const squareSize = rect.width / 8;
+    const getSquareCenter = (sq) => {
+        const file = sq.charCodeAt(0) - 97 + 1; // 'a' -> 1
+        const rank = parseInt(sq[1]);           // '1' -> 1
 
-    // Check orientation
-    // We can guess orientation by checking a known square class or just user setting
-    // But since we extract board relative to playerColor in FEN, visual coords depend on board DOM orientation
-    // Usually chess.com puts "flipped" class on board if black
-    const isFlipped = board.classList.contains('flipped');
+        // Try finding the specific square element
+        const hit = board.querySelector(`.square-${file}${rank}`);
 
-    const getCoords = (sq) => {
-        const file = sq.charCodeAt(0) - 97; // 'a'->0
-        const rank = parseInt(sq[1]) - 1; // '1'->0
+        if (hit) {
+            const hitRect = hit.getBoundingClientRect();
+            const boardRect = board.getBoundingClientRect();
+            return {
+                x: (hitRect.left - boardRect.left) + (hitRect.width / 2),
+                y: (hitRect.top - boardRect.top) + (hitRect.height / 2)
+            };
+        }
+
+        // Fallback to calculation
+        const squareWidth = board.clientWidth / 8;
+        const squareHeight = board.clientHeight / 8;
+
+        const fIndex = file - 1; // 0-7
+        const rIndex = rank - 1; // 0-7
 
         let x, y;
-        if (!isFlipped) {
-            // White bottom
-            x = file * squareSize + squareSize / 2;
-            y = (7 - rank) * squareSize + squareSize / 2;
+        if (!isBoardFlipped) {
+            // Normal (White Bottom)
+            // x: a=0 (left)
+            // y: 1=7 (bottom)
+            x = fIndex * squareWidth + (squareWidth / 2);
+            y = (7 - rIndex) * squareHeight + (squareHeight / 2);
         } else {
-            // Black bottom (flipped)
-            x = (7 - file) * squareSize + squareSize / 2;
-            y = rank * squareSize + squareSize / 2;
+            // Flipped (Black Bottom)
+            // x: a=7 (right, because h is left)
+            // y: 1=0 (top)
+
+            x = (7 - fIndex) * squareWidth + (squareWidth / 2);
+            y = rIndex * squareHeight + (squareHeight / 2);
         }
         return { x, y };
     };
 
-    const start = getCoords(from);
-    const end = getCoords(to);
+    // Fix bug: 'end' arg passed to getSquareCenter(end) would be undefined.
+    // Correcting in rewrite
+    const p1 = getSquareCenter(from);
+    const p2 = getSquareCenter(to);
 
     // Draw Line
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-    line.setAttribute("x1", start.x);
-    line.setAttribute("y1", start.y);
-    line.setAttribute("x2", end.x);
-    line.setAttribute("y2", end.y);
-    line.setAttribute("stroke", "#81b64c"); // Green
-    line.setAttribute("stroke-width", squareSize * 0.15);
+    line.setAttribute("x1", p1.x);
+    line.setAttribute("y1", p1.y);
+    line.setAttribute("x2", p2.x);
+    line.setAttribute("y2", p2.y);
+    line.setAttribute("stroke", "#81b64c");
+    line.setAttribute("stroke-width", Math.max(4, rect.width * 0.015));
     line.setAttribute("stroke-linecap", "round");
-    line.setAttribute("opacity", "0.7");
+    line.setAttribute("opacity", "0.9");
+    line.setAttribute("marker-end", "url(#arrowhead)");
 
-    // Draw Arrowhead (Circle at end for simplicity or actual triangle)
-    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    circle.setAttribute("cx", end.x);
-    circle.setAttribute("cy", end.y);
-    circle.setAttribute("r", squareSize * 0.15);
-    circle.setAttribute("fill", "#81b64c");
-    circle.setAttribute("opacity", "0.7");
+    line.style.filter = "drop-shadow(0px 0px 4px rgba(0,0,0,0.5))";
 
     svg.appendChild(line);
-    svg.appendChild(circle);
-
-    // Auto-remove after 3s? Or keep until next move. Kepp for now.
 }
 
 
